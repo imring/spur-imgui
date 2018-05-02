@@ -60,5 +60,10 @@ Move or copy file **spur_imgui.lua** to description **moonloader**.
 > ![](https://blast.hk/proxy.php?image=https%3A%2F%2Fi.imgur.com%2F6cJkPci.png&hash=26b98610127a62d683475dcab4755b31)  
 > ![](https://blast.hk/proxy.php?image=https%3A%2F%2Fi.imgur.com%2Fn1hYZ00.png&hash=e77707b1b4ae6b8fc7acd182faca9785)  
 
+**Plan of updates:**  
+* Complete the spur menu settings.  
+* Add more text settings.  
+* Add auto-update.
+  
 **[Video](https://www.youtube.com/watch?v=To0zF7UrEFU)**  
 **[Official subject in BlastHack](https://blast.hk/threads/20109/)**
