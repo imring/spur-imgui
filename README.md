@@ -4,9 +4,9 @@
 Enter/view information directly in the game, which you can copy into the chat.  
   
 **Demands:**  
-* Moonloader 025+  
-* SampFuncs  
-* ImGui  
+* [Moonloader 025+](blast.hk/threads/13305)  
+* [SampFuncs](https://blast.hk/threads/17/)  
+* [ImGui](https://blast.hk/threads/19292/)  
   
 **Installation:**
 Move or copy file **spur_imgui.lua** to description **moonloader**.  
