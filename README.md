@@ -64,6 +64,7 @@ Move or copy file **spur_imgui.lua** to description **moonloader**.
 * Complete the spur menu settings.  
 * Add more text settings.  
 * Add auto-update.
+* Add information in the script itself.
   
 **[Video](https://www.youtube.com/watch?v=To0zF7UrEFU)**  
 **[Official subject in BlastHack](https://blast.hk/threads/20109/)**
