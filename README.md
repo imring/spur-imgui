@@ -8,9 +8,9 @@ Enter/view information directly in the game, which you can copy into the chat.
 * [SampFuncs](https://blast.hk/threads/17/)  
 * [ImGui](https://blast.hk/threads/19292/)  
   
-**Installation:**
-Move or copy file **spur_imgui.lua** to description **moonloader**.  
-  
+**Installation:**  
+Move or copy file **spur_imgui.lua** to description **moonloader**.  
+  
 **Activation:**
 * Command **/spur** - open window.  
   
