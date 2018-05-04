@@ -13,7 +13,7 @@ Move or copy file **spur_imgui.lua** to description **moonloader**.  
   
 **Activation:**  
 * Command **/spur** - open window.  
-  
+  
 **Logs:**
 > **Version 1.0** - release of the script.  
 > [Video](https://www.youtube.com/watch?v=nANyvUcKBGY)  
