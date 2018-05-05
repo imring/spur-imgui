@@ -1,7 +1,7 @@
 -- 01/05/2018 
 script_name 'spur_imgui'
 script_author 'imring'
-script_version '9.0'
+script_version '10.0'
 
 inicfg							= require 'inicfg'
 imgui							= require 'imgui'
@@ -24,7 +24,7 @@ edit_pos_y						= imgui.ImInt(-1)
 edit_size_x						= imgui.ImInt(-1)
 edit_size_y						= imgui.ImInt(-1)
 number_languages				= imgui.ImInt(0)
-russian_characters				= { [168] = '�', [184] = '�', [192] = '�', [193] = '�', [194] = '�', [195] = '�', [196] = '�', [197] = '�', [198] = '�', [199] = '�', [200] = '�', [201] = '�', [202] = '�', [203] = '�', [204] = '�', [205] = '�', [206] = '�', [207] = '�', [208] = '�', [209] = '�', [210] = '�', [211] = '�', [212] = '�', [213] = '�', [214] = '�', [215] = '�', [216] = '�', [217] = '�', [218] = '�', [219] = '�', [220] = '�', [221] = '�', [222] = '�', [223] = '�', [224] = '�', [225] = '�', [226] = '�', [227] = '�', [228] = '�', [229] = '�', [230] = '�', [231] = '�', [232] = '�', [233] = '�', [234] = '�', [235] = '�', [236] = '�', [237] = '�', [238] = '�', [239] = '�', [240] = '�', [241] = '�', [242] = '�', [243] = '�', [244] = '�', [245] = '�', [246] = '�', [247] = '�', [248] = '�', [249] = '�', [250] = '�', [251] = '�', [252] = '�', [253] = '�', [254] = '�', [255] = '�' }
+russian_characters				= { [168] = 'Ё', [184] = 'ё', [192] = 'А', [193] = 'Б', [194] = 'В', [195] = 'Г', [196] = 'Д', [197] = 'Е', [198] = 'Ж', [199] = 'З', [200] = 'И', [201] = 'Й', [202] = 'К', [203] = 'Л', [204] = 'М', [205] = 'Н', [206] = 'О', [207] = 'П', [208] = 'Р', [209] = 'С', [210] = 'Т', [211] = 'У', [212] = 'Ф', [213] = 'Х', [214] = 'Ц', [215] = 'Ч', [216] = 'Ш', [217] = 'Щ', [218] = 'Ъ', [219] = 'Ы', [220] = 'Ь', [221] = 'Э', [222] = 'Ю', [223] = 'Я', [224] = 'а', [225] = 'б', [226] = 'в', [227] = 'г', [228] = 'д', [229] = 'е', [230] = 'ж', [231] = 'з', [232] = 'и', [233] = 'й', [234] = 'к', [235] = 'л', [236] = 'м', [237] = 'н', [238] = 'о', [239] = 'п', [240] = 'р', [241] = 'с', [242] = 'т', [243] = 'у', [244] = 'ф', [245] = 'х', [246] = 'ц', [247] = 'ч', [248] = 'ш', [249] = 'щ', [250] = 'ъ', [251] = 'ы', [252] = 'ь', [253] = 'э', [254] = 'ю', [255] = 'я' }
 magicChar						= { '\\', '/', ':', '*', '?', '"', '>', '<', '|' }
 
 local style = imgui.GetStyle()
@@ -151,7 +151,7 @@ function imgui.OnDrawFrame()
 				imgui.BeginChild(i+50, imgui.ImVec2(0, 100), true)
 				imgui.Text(u8(nameFileOpen))
 				imgui.SameLine()
-				if imgui.Button(u8(language.names[17])..'�'..i) then
+				if imgui.Button(u8(language.names[17])..'№'..i) then
 					find_text_spur.v = ''
 					text_spur = true
 					id_spur = i
@@ -282,7 +282,7 @@ function imgui.OnDrawFrame()
 						imgui.Separator()
 						for i , _ in pairs(table_text_spur.text) do
 							if table_text_spur.text[i] then 
-								imgui.Checkbox(table_text_spur.text[i]..'�'..i, table_text_spur.enable[i])
+								imgui.Checkbox(table_text_spur.text[i]..'№'..i, table_text_spur.enable[i])
 							end
 						end
 					end
@@ -348,9 +348,9 @@ function imgui.OnDrawFrame()
 		if example_menu.v then
 			local file = inicfg.load(nil, 'moonloader/filesSpur/language/'..languages[number_languages.v])
 			while not file do file = inicfg.load(nil, 'moonloader/filesSpur/language/'..languages[number_languages.v]) end
-			imgui.Begin(u8(file.names[1])..'�1', example_menu.v, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove)
-			imgui.SetWindowSize(u8(file.names[1])..'�1', imgui.ImVec2(edit_size_x.v, edit_size_y.v))
-			imgui.SetWindowPos(u8(file.names[1])..'�1', imgui.ImVec2((edit_pos_x.v == -1) and (x/2)-(imgui.GetWindowWidth()/2) or edit_pos_x.v-(edit_pos_x.v/2), (edit_pos_y.v == -1) and (y/2)-(imgui.GetWindowHeight()/2) or edit_pos_y.v-(edit_pos_y.v/2)))
+			imgui.Begin(u8(file.names[1])..'№1', example_menu.v, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove)
+			imgui.SetWindowSize(u8(file.names[1])..'№1', imgui.ImVec2(edit_size_x.v, edit_size_y.v))
+			imgui.SetWindowPos(u8(file.names[1])..'№1', imgui.ImVec2((edit_pos_x.v == -1) and (x/2)-(imgui.GetWindowWidth()/2) or edit_pos_x.v-(edit_pos_x.v/2), (edit_pos_y.v == -1) and (y/2)-(imgui.GetWindowHeight()/2) or edit_pos_y.v-(edit_pos_y.v/2)))
 			imgui.BeginChild(15, imgui.ImVec2(imgui.GetWindowWidth()/5, 0), true)
 			if imgui.Selectable(u8(file.names[22])) then example_menu.v = false end
 			imgui.EndChild()
@@ -397,7 +397,7 @@ function main()
 		file:flush()
 		file:close()
 		local file = io.open('moonloader/filesSpur/language/russian.ini', 'a')
-		file:write('[names]\nname=�������\n1=ImGui �����\n2=���\n3=�����\n4=�������� �����\n5=��� �����\n6=���������\n7=������\n8=��������� ����� �����\n9=�����������\n10=����������� ��\n11=��������� � ��������� ����\n12=�������� ����� �����\n13=�������� ��� �����\n14=����������� ����� ����� � ���\n15=������� �����\n16=������������ � �������� ����\n17=������� �����\n18=��������� �����\n19=������� �����\n20=��������\n21=������\n22=������� ����\n23=������ ����\n24=������ ����\n25=�������� �����')
+		file:write('[names]\nname=Русский\n1=ImGui Шпора\n2=Имя\n3=Текст\n4=Добавить шпору\n5=Имя шпоры\n6=Сохранить\n7=Отмена\n8=Сохранить текст шпоры\n9=Скопировать\n10=Скопировать всё\n11=Открепить в отдельное окно\n12=Изменить текст шпоры\n13=Изменить имя шпоры\n14=Скопировать текст шпоры в чат\n15=Удалить шпору\n16=Присоединить к главному окну\n17=Открыть шпору\n18=Настройка шпоры\n19=Позиция шпоры\n20=Переводы\n21=Пример\n22=Закрыть окно\n23=Ширина окна\n24=Высота окна\n25=Обновить файлы')
 		file:flush()
 		file:close()
 	end
