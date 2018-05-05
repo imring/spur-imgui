@@ -1,7 +1,6 @@
--- 01/05/2018 
 script_name 'spur_imgui'
 script_author 'imring'
-script_version '10.0'
+script_version '9.0'
 
 inicfg							= require 'inicfg'
 imgui							= require 'imgui'
