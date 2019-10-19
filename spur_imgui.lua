@@ -1,718 +1,491 @@
-script_name 'spur_imgui'
-script_author 'imring'
-script_version '9.0'
+script_name('spur-imgui')
+script_author('imring')
+script_version('11.0')
+script_url('https://fishlake-scripts.ru/resources/8/')
 
-inicfg							= require 'inicfg'
-imgui							= require 'imgui'
-encoding						= require 'encoding'
-encoding.default				= 'CP1251'
-u8								= encoding.UTF8
-files							= {}
-window_file						= {}
-languages						= {}
-images							= {}
-menu_spur						= imgui.ImBool(false)
-example_menu					= imgui.ImBool(false)
-name_add_spur					= imgui.ImBuffer(256)
-name_edit_spur					= imgui.ImBuffer(256)
-edit_text_spur					= imgui.ImBuffer(65536)
-find_name_spur					= imgui.ImBuffer(256)
-find_text_spur					= imgui.ImBuffer(256)
-edit_pos_x						= imgui.ImInt(-1)
-edit_pos_y						= imgui.ImInt(-1)
-edit_size_x						= imgui.ImInt(-1)
-edit_size_y						= imgui.ImInt(-1)
-number_languages				= imgui.ImInt(0)
-russian_characters				= { [168] = 'Ё', [184] = 'ё', [192] = 'А', [193] = 'Б', [194] = 'В', [195] = 'Г', [196] = 'Д', [197] = 'Е', [198] = 'Ж', [199] = 'З', [200] = 'И', [201] = 'Й', [202] = 'К', [203] = 'Л', [204] = 'М', [205] = 'Н', [206] = 'О', [207] = 'П', [208] = 'Р', [209] = 'С', [210] = 'Т', [211] = 'У', [212] = 'Ф', [213] = 'Х', [214] = 'Ц', [215] = 'Ч', [216] = 'Ш', [217] = 'Щ', [218] = 'Ъ', [219] = 'Ы', [220] = 'Ь', [221] = 'Э', [222] = 'Ю', [223] = 'Я', [224] = 'а', [225] = 'б', [226] = 'в', [227] = 'г', [228] = 'д', [229] = 'е', [230] = 'ж', [231] = 'з', [232] = 'и', [233] = 'й', [234] = 'к', [235] = 'л', [236] = 'м', [237] = 'н', [238] = 'о', [239] = 'п', [240] = 'р', [241] = 'с', [242] = 'т', [243] = 'у', [244] = 'ф', [245] = 'х', [246] = 'ц', [247] = 'ч', [248] = 'ш', [249] = 'щ', [250] = 'ъ', [251] = 'ы', [252] = 'ь', [253] = 'э', [254] = 'ю', [255] = 'я' }
-magicChar						= { '\\', '/', ':', '*', '?', '"', '>', '<', '|' }
+require 'deps' {
+	'fyp:mimgui'
+}
 
-local style = imgui.GetStyle()
-local colors = style.Colors
-local clr = imgui.Col
-local ImVec4 = imgui.ImVec4
+local imgui = require 'mimgui'
+local ffi = require 'ffi'
+local folder = require 'folder'
+local encoding = require 'encoding'
 
-style.WindowRounding = 1.5
+local cp1251 = encoding.CP1251
+encoding.default = 'UTF-8'
 
-colors[clr.TitleBg] = ImVec4(0.0, 0.0, 0.0, 0.6)
-colors[clr.TitleBgActive] = ImVec4(0.0, 0.0, 0.0, 0.7)
-colors[clr.TitleBgCollapsed] = ImVec4(0.0, 0.0, 0.0, 0.8)
+local bold, iranges, welcome
 
-colors[clr.CloseButton] = ImVec4(0.41, 0.41, 0.41, 0.50)
-colors[clr.CloseButtonHovered] = ImVec4(0.98, 0.39, 0.36, 1.00)
-colors[clr.CloseButtonActive] = ImVec4(0.98, 0.39, 0.36, 1.00)
+local lower, sub, char, upper = string.lower, string.sub, string.char, string.upper
+local concat = table.concat
 
-colors[clr.WindowBg] = ImVec4(0.0, 0.0, 0.0, 0.5)
-
-colors[clr.ScrollbarBg] = ImVec4(0.0, 0.0, 0.0, 0.2)
-
-colors[clr.ScrollbarGrab] = ImVec4(0.8, 0.8, 0.8, 0.3)
-colors[clr.ScrollbarGrabHovered] = ImVec4(0.8, 0.8, 0.8, 0.4)
-colors[clr.ScrollbarGrabActive] = ImVec4(0.8, 0.8, 0.8, 0.5)
-
-colors[clr.Header] = ImVec4(0.8, 0.8, 0.8, 0.3)
-colors[clr.HeaderHovered] = ImVec4(0.8, 0.8, 0.8, 0.4)
-colors[clr.HeaderActive] = ImVec4(0.8, 0.8, 0.8, 0.5)
-
-colors[clr.Button] = ImVec4(0.8, 0.8, 0.8, 0.3)
-colors[clr.ButtonHovered] = ImVec4(0.8, 0.8, 0.8, 0.4)
-colors[clr.ButtonActive] = ImVec4(0.8, 0.8, 0.8, 0.5)
-
-colors[clr.SliderGrabActive] = ImVec4(0.8, 0.8, 0.8, 0.3)
-
-function imgui.OnDrawFrame()
-	local x, y = getScreenResolution()
-	if menu_spur.v then
-		local t_find_text = {}
-		imgui.SetNextWindowPos(imgui.ImVec2((config.pos.x == -1) and x/2 or config.pos.x, (config.pos.y == -1) and y/2 or config.pos.y), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-		imgui.SetNextWindowSize(imgui.ImVec2(config.size.x, config.size.y), imgui.Cond.FirstUseEver)
-		imgui.Begin(u8(language.names[1]), menu_spur)
-		imgui.BeginChild(1, imgui.ImVec2(imgui.GetWindowWidth()/5, 0), true)
-		imgui.InputText(u8(language.names[2]), find_name_spur)
-		imgui.InputText(u8(language.names[3]), find_text_spur)
-		if imgui.Selectable(u8(language.names[4])) then add_spur = true end
-		if imgui.Selectable(u8(language.names[18])) then 
-			edit_pos_x.v = config.pos.x
-			edit_pos_y.v = config.pos.y
-			edit_size_x.v = config.size.x
-			edit_size_y.v = config.size.y
-			for i, k in pairs(languages) do
-				if k == config.language.path then number_languages.v = i end	
-			end
-			setting_spur = true 
-		end
-		if imgui.Selectable(u8(language.names[25])) then files, window_file, languages, images = getFilesSpur() end
-		imgui.Separator()
-		for i, k in pairs(files) do
-			find_name_spur.v = find_name_spur.v:gsub('%[', '')
-			find_name_spur.v = find_name_spur.v:gsub('%(', '')
-			find_text_spur.v = find_text_spur.v:gsub('%[', '')
-			find_text_spur.v = find_text_spur.v:gsub('%(', '')
-			if k then
-				local nameFileOpen = k:match('(.*).txt')
-				if find_text_spur.v:find('%S') then
-					local file = io.open('moonloader/filesSpur/'..k, 'r')
-					while not file do file = io.open('moonloader/filesSpur/'..k, 'r') end
-					local fileText = file:read('*a')
-					fileText = fileText:gsub('{......}', '')
-					if string.rlower(fileText):find(string.rlower(u8:decode(find_text_spur.v))) then
-						t_find_text[#t_find_text+1] = k
-						if imgui.Selectable(u8(nameFileOpen)) then
-							find_text_spur.v = ''
-							text_spur = true
-							id_spur = i
-						end
-					end
-					file:close()
-				elseif string.rlower(nameFileOpen):find(string.rlower(u8:decode(find_name_spur.v))) and imgui.Selectable(u8(nameFileOpen)) then
-					text_spur = true
-					id_spur = i
-				end
-			end
-		end
-		imgui.EndChild()
-		imgui.SameLine()
-		imgui.BeginChild(2, imgui.ImVec2(0, 0), false)
-		if setting_spur then
-			imgui.InputInt(u8(language.names[19]..' X'), edit_pos_x)
-			imgui.InputInt(u8(language.names[19]..' Y'), edit_pos_y)
-			imgui.InputInt(u8(language.names[23]), edit_size_x)
-			imgui.InputInt(u8(language.names[24]), edit_size_y)
-			if imgui.CollapsingHeader(u8(language.names[20])) then
-				for i, k in pairs(languages) do
-					local file = inicfg.load(nil, 'moonloader/filesSpur/language/'..k)
-					while not file do file = inicfg.load(nil, 'moonloader/filesSpur/language/'..k) end
-					imgui.RadioButton(u8(file.names.name), number_languages, i)
-				end
-			end
-			imgui.NewLine()
-			if imgui.Button(u8(language.names[21])) then
-				example_menu.v = not example_menu.v
-			end
-			imgui.SameLine()
-			if imgui.Button(u8(language.names[6])) then
-				config.pos.x = edit_pos_x.v
-				config.pos.y = edit_pos_y.v
-				config.size.x = edit_size_x.v
-				config.size.y = edit_size_y.v
-				config.language.path = languages[number_languages.v]
-				inicfg.save(config, 'moonloader/filesSpur/config.ini')
-				thisScript():reload()
-			end
-			imgui.SameLine()
-			if imgui.Button(u8(language.names[7])) then
-				setting_spur = false
-			end
-		elseif t_find_text[1] then
-			for i = 1, #t_find_text do
-				local file = io.open('moonloader/filesSpur/'..t_find_text[i], 'r')
-				while not file do file = io.open('moonloader/filesSpur/'..t_find_text[i], 'r') end
-				local nameFileOpen = t_find_text[i]:match('(.*).txt')
-				imgui.BeginChild(i+50, imgui.ImVec2(0, 100), true)
-				imgui.Text(u8(nameFileOpen))
-				imgui.SameLine()
-				if imgui.Button(u8(language.names[17])..'№'..i) then
-					find_text_spur.v = ''
-					text_spur = true
-					id_spur = i
-				end
-				imgui.Separator()
-				local fileText = file:read('*a')
-				for w in fileText:gmatch('[^\r\n]+') do
-					imgui.TextColoredRGB(w, imgui.GetMaxWidthByText(fileText))
-				end
-				imgui.EndChild()
-				file:close()
-			end
-		elseif add_spur then
-			imgui.InputText(u8(language.names[5]), name_add_spur)
-			imgui.SameLine()
-			if imgui.Button(u8(language.names[6])) then
-				name_add_spur.v = u8(removeMagicChar(u8:decode(name_add_spur.v)))
-				local namedublicate = false
-				for i, k in pairs(files) do
-					if k == u8:decode(name_add_spur.v) or not u8:decode(name_add_spur.v):find('%S') then namedublicate = true end
-				end
-				if not namedublicate then
-					local index, boolindex = 0, false
-					while not boolindex do
-						index = index + 1
-						send = true
-						if not files[index] then boolindex = true end
-					end
-					local file = io.open('moonloader/filesSpur/'..u8:decode(name_add_spur.v)..'.txt', 'a')
-					file:write('')
-					file:flush()
-					file:close()
-					window_file[#window_file+1] = imgui.ImBool(false)
-					files[#files+1] = u8:decode(name_add_spur.v)..'.txt'
-					add_spur = false
-				end
-			end
-			imgui.SameLine()
-			if imgui.Button(u8(language.names[7])) then add_spur = false end
-		elseif edit_nspur then
-			imgui.InputText(u8(language.names[5]), name_edit_spur)
-			imgui.SameLine()
-			if imgui.Button(u8(language.names[6])) then
-				name_edit_spur.v = u8(removeMagicChar(u8:decode(name_edit_spur.v)))
-				local namedublicate = false
-				for i, k in pairs(files) do
-					if k == u8:decode(name_edit_spur.v) or not u8:decode(name_edit_spur.v):find('%S') then namedublicate = true end
-				end
-				if not namedublicate then
-					local file = io.open('moonloader/filesSpur/'..files[id_spur], 'r')
-					while not file do file = io.open('moonloader/filesSpur/'..files[id_spur], 'r') end
-					local fileText = file:read('*a')
-					file:close()
-					os.remove('moonloader/filesSpur/'..files[id_spur])
-					local file = io.open('moonloader/filesSpur/'..u8:decode(name_edit_spur.v)..'.txt', 'w')
-					file:write(fileText)
-					file:flush()
-					file:close()
-					files[id_spur] = u8:decode(name_edit_spur.v)..'.txt'
-					edit_nspur = false
-				end
-			end
-			imgui.SameLine()
-			if imgui.Button(u8(language.names[7])) then edit_nspur = false end
-			imgui.Separator()
-			local file = io.open('moonloader/filesSpur/'..files[id_spur], 'r')
-			while not file do file = io.open('moonloader/filesSpur/'..files[id_spur], 'r') end
-			local fileText = file:read('*a')
-			fileText = fileText:gsub('\n\n', '\n \n')
-			for w in fileText:gmatch('[^\r\n]+') do
-				imgui.TextColoredRGB(w, imgui.GetMaxWidthByText(fileText))
-			end
-			file:close()
-		elseif id_spur then
-			if not window_file[id_spur].v then
-				if not text_spur then
-					if edit_spur then
-						imgui.Text(u8(files[id_spur]:match('(.*).txt')))
-						imgui.SameLine()
-						if imgui.Button(u8(language.names[8])) then
-							edit_text_spur.v = edit_text_spur.v:gsub('\n\n', '\n \n')
-							local file = io.open('moonloader/filesSpur/'..files[id_spur], 'w')
-							file:write(u8:decode(edit_text_spur.v))
-							file:flush()
-							file:close()
-							text_spur = true
-							edit_spur = false
-						end
-						imgui.SameLine()
-						if imgui.Button(u8(language.names[7])) then
-							text_spur = true
-							edit_spur = false
-						end
-						imgui.Separator()
-						imgui.InputTextMultiline('', edit_text_spur, imgui.ImVec2(-0.1, -0.1))
-					end
-					if copy_spur then
-						imgui.Text(u8(files[id_spur]:match('(.*).txt')))
-						imgui.SameLine()
-						if imgui.Button(u8(language.names[9])) then
-							local text = ''
-							for i , _ in pairs(table_text_spur.text) do
-								if table_text_spur.text[i] and table_text_spur.enable[i].v then
-									text = text..u8:decode(table_text_spur.text[i])..' '
-								end
-							end
-							sampSetChatInputText(text)
-							text_spur = true
-							copy_spur = false
-						end
-						imgui.SameLine()
-						if imgui.Button(u8(language.names[10])) then
-							local text = ''
-							for i = 1, #table_text_spur.text + 1 do
-								if table_text_spur.text[i] then 
-									text = text..u8:decode(table_text_spur.text[i])..' '
-								end
-							end
-							sampSetChatInputText(text)
-							text_spur = true
-							copy_spur = false
-						end
-						imgui.SameLine()
-						if imgui.Button(u8(language.names[7])) then
-							text_spur = true
-							copy_spur = false
-						end
-						imgui.Separator()
-						for i , _ in pairs(table_text_spur.text) do
-							if table_text_spur.text[i] then 
-								imgui.Checkbox(table_text_spur.text[i]..'№'..i, table_text_spur.enable[i])
-							end
-						end
-					end
-				else
-					local file = io.open('moonloader/filesSpur/'..files[id_spur], 'r')
-					while not file do file = io.open('moonloader/filesSpur/'..files[id_spur], 'r') end
-					local fileText = file:read('*a')
-					fileText = fileText:gsub('\n\n', '\n \n')
-					edit_spur = false
-					copy_spur = false
-					imgui.Text(u8(files[id_spur]:match('(.*).txt')))
-					file:close()
-					imgui.SameLine()
-					if imgui.Button(u8(language.names[11])) then
-						window_file[id_spur].v = true
-					end
-					if imgui.Button(u8(language.names[12])) then
-						text_spur = false
-						edit_spur = true
-						edit_text_spur.v = u8(fileText)
-					end
-					imgui.SameLine()
-					if imgui.Button(u8(language.names[13])) then
-						edit_nspur = true
-						name_edit_spur.v = u8(files[id_spur]:match('(.*).txt'))
-					end
-					imgui.SameLine()
-					if imgui.Button(u8(language.names[14])) then
-						text_spur = false
-						copy_spur = true
-						table_text_spur = { enable = {}, text = {} }
-						for w in fileText:gmatch('[^\r\n]+') do
-							w = w:gsub('{......}', '')
-							w = w:gsub('{........}', '')
-							w = w:gsub('%[center%]', '')
-							w = w:gsub('%[right%]', '')
-							table_text_spur.text[#table_text_spur.text+1] = u8(w)
-							table_text_spur.enable[#table_text_spur.enable+1] = imgui.ImBool(false)
-						end
-					end
-					imgui.SameLine()
-					if imgui.Button(u8(language.names[15])) then
-						os.remove('moonloader/filesSpur/'..files[id_spur])
-						while doesFileExist('moonloader/filesSpur/'..files[id_spur]) do os.remove('moonloader/filesSpur/'..files[id_spur]) end
-						window_file[id_spur] = nil
-						files[id_spur] = nil
-						id_spur = nil
-						text_spur = false
-					end
-					imgui.Separator()
-					for w in fileText:gmatch('[^\r\n]+') do
-						imgui.TextColoredRGB(w, imgui.GetMaxWidthByText(fileText))
-					end
-				end
-			else
-				if imgui.Button(u8(language.names[16])) then
-					window_file[id_spur].v = false
-				end
-			end
-		end
-		imgui.EndChild()
-		imgui.End()
-		if example_menu.v then
-			local file = inicfg.load(nil, 'moonloader/filesSpur/language/'..languages[number_languages.v])
-			while not file do file = inicfg.load(nil, 'moonloader/filesSpur/language/'..languages[number_languages.v]) end
-			imgui.Begin(u8(file.names[1])..'№1', example_menu.v, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove)
-			imgui.SetWindowSize(u8(file.names[1])..'№1', imgui.ImVec2(edit_size_x.v, edit_size_y.v))
-			imgui.SetWindowPos(u8(file.names[1])..'№1', imgui.ImVec2((edit_pos_x.v == -1) and (x/2)-(imgui.GetWindowWidth()/2) or edit_pos_x.v-(edit_pos_x.v/2), (edit_pos_y.v == -1) and (y/2)-(imgui.GetWindowHeight()/2) or edit_pos_y.v-(edit_pos_y.v/2)))
-			imgui.BeginChild(15, imgui.ImVec2(imgui.GetWindowWidth()/5, 0), true)
-			if imgui.Selectable(u8(file.names[22])) then example_menu.v = false end
-			imgui.EndChild()
-			imgui.End()
-		end
-	end
-	for i, k in pairs(files) do
-		if k then
-			if window_file[i].v then
-				local flags = (not imgui.ShowCursor) and imgui.WindowFlags.NoMove + imgui.WindowFlags.NoResize or 0
-				imgui.SetNextWindowPos(imgui.ImVec2(x/2-100, y/2-100), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-				imgui.SetNextWindowSize(imgui.ImVec2(500, 500), imgui.Cond.FirstUseEver)
-				imgui.Begin(u8(k:match('(.*).txt')), window_file[i], flags)
-				local file = io.open('moonloader/filesSpur/'..k, 'r')
-				while not file do file = io.open('moonloader/filesSpur/'..k, 'r') end
-				local fileText = file:read('*a')
-				for w in fileText:gmatch('[^\r\n]+') do
-					imgui.TextColoredRGB(w, imgui.GetMaxWidthByText(fileText) - 15)
-				end
-				file:close()
-				imgui.End()
-			end
-		end
-	end
+-- initialization table
+local lu_rus, ul_rus = {}, {}
+for i = 192, 223 do
+	local A, a = char(i), char(i + 32)
+	ul_rus[A] = a
+	lu_rus[a] = A
 end
+local E, e = char(168), char(184)
+ul_rus[E] = e
+lu_rus[e] = E
 
-function main()
-	while not isSampAvailable() do wait(0) end
-	sampRegisterChatCommand('spur', function() menu_spur.v = not menu_spur.v end)
-	if not doesDirectoryExist('moonloader/filesSpur') then 
-		createDirectory('moonloader/filesSpur') 
-		local file = io.open('moonloader/filesSpur/Help.txt', 'a')
-		file:write('[center]{CCCCCC}Spur ImGui by {2A79E0}imring{CCCCCC}\n \nThis script is created on ImGui.\nIn this script you can enter some information that you can copy into the chat.\n \n[right]Version: 8.0\n[right]Last update: 13 April 2018.\n[right]Special for {DDDDDD}blast{FFFFFF}.{0693C7}hk')
-		file:flush()
-		file:close()
-		local file = io.open('moonloader/filesSpur/config.ini', 'a')
-		file:write('[pos]\nx=-1\ny=-1\n[size]\nx=850\ny=700\n[language]\npath=english.ini')
-		file:flush()
-		file:close()
+imgui.OnInitialize(function()
 
-		createDirectory('moonloader/filesSpur/language') 
-		local file = io.open('moonloader/filesSpur/language/english.ini', 'a')
-		file:write('[names]\nname=English\n1=ImGui Spur\n2=Name\n3=Text\n4=Add spur\n5=Name spur\n6=Save\n7=Cancel\n8=Save text spur\n9=Copy\n10=Copy all\n11=To separate into separate window\n12=Edit text spur\n13=Edit name spur\n14=Copy text spur in chat input\n15=Delete spur\n16=Attach to main window\n17=Open spur\n18=Settings spur\n19=Position spur\n20=Translates\n21=Example\n22=Close window\n23=Width window\n24=Height window\n25=Update files')
-		file:flush()
-		file:close()
-		local file = io.open('moonloader/filesSpur/language/russian.ini', 'a')
-		file:write('[names]\nname=Русский\n1=ImGui Шпора\n2=Имя\n3=Текст\n4=Добавить шпору\n5=Имя шпоры\n6=Сохранить\n7=Отмена\n8=Сохранить текст шпоры\n9=Скопировать\n10=Скопировать всё\n11=Открепить в отдельное окно\n12=Изменить текст шпоры\n13=Изменить имя шпоры\n14=Скопировать текст шпоры в чат\n15=Удалить шпору\n16=Присоединить к главному окну\n17=Открыть шпору\n18=Настройка шпоры\n19=Позиция шпоры\n20=Переводы\n21=Пример\n22=Закрыть окно\n23=Ширина окна\n24=Высота окна\n25=Обновить файлы')
-		file:flush()
-		file:close()
-	end
-	if not doesDirectoryExist('moonloader/filesSpur/img') then
-		createDirectory('moonloader/filesSpur/img')
-	end
-	config = inicfg.load(nil, 'moonloader/filesSpur/config.ini')
-	while not config do config = inicfg.load(nil, 'moonloader/filesSpur/config.ini') end
-	language = inicfg.load(nil, 'moonloader/filesSpur/language/'..config.language.path)
-	while not language do language = inicfg.load(nil, 'moonloader/filesSpur/language/'..config.language.path) end
-	files, window_file, languages, images = getFilesSpur()
-	while true do wait(0) 
-		if files[1] then
-			for i, k in pairs(files) do
-				if k and not imgui.Process then imgui.Process = menu_spur.v or window_file[i].v end
-			end
-		else imgui.Process = menu_spur.v end
-		imgui.LockPlayer = menu_spur.v
-		imgui.ShowCursor = menu_spur.v
-		--if not imgui.ShowCursor then imgui.SetMouseCursor(-1) end
-	end
-end
-
-function string.rlower(s)
-	s = s:lower()
-	local strlen = s:len()
-	if strlen == 0 then return s end
-	s = s:lower()
-	local output = ''
-	for i = 1, strlen do
-		local ch = s:byte(i)
-		if ch >= 192 and ch <= 223 then
-			output = output .. russian_characters[ch + 32]
-		elseif ch == 168 then
-			output = output .. russian_characters[184]
-		else
-			output = output .. string.char(ch)
-		end
-	end
-	return output
-end
-
-function string.rupper(s)
-	s = s:upper()
-	local strlen = s:len()
-	if strlen == 0 then return s end
-	s = s:upper()
-	local output = ''
-	for i = 1, strlen do
-		local ch = s:byte(i)
-		if ch >= 224 and ch <= 255 then
-			output = output .. russian_characters[ch - 32]
-		elseif ch == 184 then
-			output = output .. russian_characters[168]
-		else
-			output = output .. string.char(ch)
-		end
-	end
-	return output
-end
-
-function imgui.TextColoredRGB(string, max_float)
-	imgui.BeginChild(3, imgui.ImVec2(0, 0), false, imgui.WindowFlags.HorizontalScrollbar)
+	local igio = imgui.GetIO()
+	igio.ConfigFlags = ffi.C.ImGuiConfigFlags_NavEnableKeyboard + igio.ConfigFlags
 
 	local style = imgui.GetStyle()
 	local colors = style.Colors
-	local clr = imgui.Col
-	local u8 = require 'encoding'.UTF8
+	local ImVec4 = imgui.ImVec4
 
-	local function color_imvec4(color)
-		if color:upper():sub(1, 6) == 'SSSSSS' then return imgui.ImVec4(colors[clr.Text].x, colors[clr.Text].y, colors[clr.Text].z, tonumber(color:sub(7, 8), 16) and tonumber(color:sub(7, 8), 16)/255 or colors[clr.Text].w) end
-		local color = type(color) == 'number' and ('%X'):format(color):upper() or color:upper()
-		local rgb = {}
-		for i = 1, #color/2 do rgb[#rgb+1] = tonumber(color:sub(2*i-1, 2*i), 16) end
-		return imgui.ImVec4(rgb[1]/255, rgb[2]/255, rgb[3]/255, rgb[4] and rgb[4]/255 or colors[clr.Text].w)
+	style.WindowRounding = 4
+
+	-- From https://github.com/procedural/gpulib/blob/master/gpulib_imgui.h
+	local function imgui_easy_theming(color_for_text, color_for_head, color_for_area, color_for_body, color_for_pops)
+		local style = imgui.GetStyle()
+		local ImVec4 = imgui.ImVec4
+
+		style.Colors[ffi.C.ImGuiCol_Text] = ImVec4( color_for_text.x, color_for_text.y, color_for_text.z, 1.00 )
+		style.Colors[ffi.C.ImGuiCol_TextDisabled] = ImVec4( color_for_text.x, color_for_text.y, color_for_text.z, 0.58 )
+		style.Colors[ffi.C.ImGuiCol_WindowBg] = ImVec4( color_for_body.x, color_for_body.y, color_for_body.z, 0.95 )
+		-- style.Colors[ffi.C.ImGuiCol_ChildWindowBg] = ImVec4( color_for_area.x, color_for_area.y, color_for_area.z, 0.58 )
+		style.Colors[ffi.C.ImGuiCol_Border] = ImVec4( color_for_body.x, color_for_body.y, color_for_body.z, 0.00 )
+		style.Colors[ffi.C.ImGuiCol_BorderShadow] = ImVec4( color_for_body.x, color_for_body.y, color_for_body.z, 0.00 )
+		style.Colors[ffi.C.ImGuiCol_FrameBg] = ImVec4( color_for_area.x, color_for_area.y, color_for_area.z, 1.00 )
+		style.Colors[ffi.C.ImGuiCol_FrameBgHovered] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 0.78 )
+		style.Colors[ffi.C.ImGuiCol_FrameBgActive] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 1.00 )
+		style.Colors[ffi.C.ImGuiCol_TitleBg] = ImVec4( color_for_area.x, color_for_area.y, color_for_area.z, 1.00 )
+		style.Colors[ffi.C.ImGuiCol_TitleBgCollapsed] = ImVec4( color_for_area.x, color_for_area.y, color_for_area.z, 0.75 )
+		style.Colors[ffi.C.ImGuiCol_TitleBgActive] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 1.00 )
+		style.Colors[ffi.C.ImGuiCol_MenuBarBg] = ImVec4( color_for_area.x, color_for_area.y, color_for_area.z, 0.47 )
+		style.Colors[ffi.C.ImGuiCol_ScrollbarBg] = ImVec4( color_for_area.x, color_for_area.y, color_for_area.z, 1.00 )
+		style.Colors[ffi.C.ImGuiCol_ScrollbarGrab] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 0.21 )
+		style.Colors[ffi.C.ImGuiCol_ScrollbarGrabHovered] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 0.78 )
+		style.Colors[ffi.C.ImGuiCol_ScrollbarGrabActive] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 1.00 )
+		-- style.Colors[ffi.C.ImGuiCol_ComboBg] = ImVec4( color_for_area.x, color_for_area.y, color_for_area.z, 1.00 )
+		style.Colors[ffi.C.ImGuiCol_CheckMark] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 0.80 )
+		style.Colors[ffi.C.ImGuiCol_SliderGrab] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 0.50 )
+		style.Colors[ffi.C.ImGuiCol_SliderGrabActive] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 1.00 )
+		style.Colors[ffi.C.ImGuiCol_Button] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 0.50 )
+		style.Colors[ffi.C.ImGuiCol_ButtonHovered] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 0.86 )
+		style.Colors[ffi.C.ImGuiCol_ButtonActive] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 1.00 )
+		style.Colors[ffi.C.ImGuiCol_Header] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 0.76 )
+		style.Colors[ffi.C.ImGuiCol_HeaderHovered] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 0.86 )
+		style.Colors[ffi.C.ImGuiCol_HeaderActive] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 1.00 )
+		-- style.Colors[ffi.C.ImGuiCol_Column] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 0.32 )
+		-- style.Colors[ffi.C.ImGuiCol_ColumnHovered] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 0.78 )
+		-- style.Colors[ffi.C.ImGuiCol_ColumnActive] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 1.00 )
+		style.Colors[ffi.C.ImGuiCol_ResizeGrip] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 0.15 )
+		style.Colors[ffi.C.ImGuiCol_ResizeGripHovered] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 0.78 )
+		style.Colors[ffi.C.ImGuiCol_ResizeGripActive] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 1.00 )
+		-- style.Colors[ffi.C.ImGuiCol_CloseButton] = ImVec4( color_for_text.x, color_for_text.y, color_for_text.z, 0.16 )
+		-- style.Colors[ffi.C.ImGuiCol_CloseButtonHovered] = ImVec4( color_for_text.x, color_for_text.y, color_for_text.z, 0.39 )
+		-- style.Colors[ffi.C.ImGuiCol_CloseButtonActive] = ImVec4( color_for_text.x, color_for_text.y, color_for_text.z, 1.00 )
+		style.Colors[ffi.C.ImGuiCol_PlotLines] = ImVec4( color_for_text.x, color_for_text.y, color_for_text.z, 0.63 )
+		style.Colors[ffi.C.ImGuiCol_PlotLinesHovered] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 1.00 )
+		style.Colors[ffi.C.ImGuiCol_PlotHistogram] = ImVec4( color_for_text.x, color_for_text.y, color_for_text.z, 0.63 )
+		style.Colors[ffi.C.ImGuiCol_PlotHistogramHovered] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 1.00 )
+		style.Colors[ffi.C.ImGuiCol_TextSelectedBg] = ImVec4( color_for_head.x, color_for_head.y, color_for_head.z, 0.43 )
+		style.Colors[ffi.C.ImGuiCol_PopupBg] = ImVec4( color_for_pops.x, color_for_pops.y, color_for_pops.z, 0.92 )
+		-- style.Colors[ffi.C.ImGuiCol_ModalWindowDarkening] = ImVec4( color_for_area.x, color_for_area.y, color_for_area.z, 0.73 )
 	end
 
-	local function render_text(string)
-		for w in string:gmatch('[^\r\n]+') do
-			if w:sub(1, 5) == '[img]' then
-				local name = w:sub(6)
-				if w:match('%[img%].+%[size%](%d+)%-(%d+)') then
-					name = w:match('%[img%](.*)%[size%].+')
+	local function SetupImGuiStyle2()
+		local color_for_text = { x = 236 / 255, y = 240 / 255, z = 241 / 255 }
+		local color_for_head = { x = 41 / 255, y = 128 / 255, z = 185 / 255 }
+		local color_for_area = { x = 57 / 255, y = 79 / 255, z = 105 / 255 }
+		local color_for_body = { x = 44 / 255, y = 62 / 255, z = 80 / 255 }
+		local color_for_pops = { x = 33 / 255, y = 46 / 255, z = 60 / 255 }
+		imgui_easy_theming(color_for_text, color_for_head, color_for_area, color_for_body, color_for_pops)
+	end
+
+	SetupImGuiStyle2()
+
+	local ranges = {
+		0x0020, 0x00FF,
+		0x0400, 0x052F,
+		0x2DE0, 0x2DFF,
+		0xA640, 0xA69F,
+		0x2013, 0x2122,
+		0,
+	}
+
+	local fonts = imgui.GetIO().Fonts
+	fonts:Clear()
+	iranges = ffi.new('ImWchar[?]', #ranges, ranges)
+	fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\consola.ttf', 12, nil, iranges)
+	bold = fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\consolab.ttf', 12, nil, iranges)
+	welcome = fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\consolab.ttf', 14, nil, iranges)
+
+end)
+
+-- https://blast.hk/threads/13380/post-231049
+local function split(str, delim, plain)
+	local tokens, pos, i, plain = {}, 1, 1, not (plain == false)
+	repeat
+		local npos, epos = string.find(str, delim, pos, plain)
+		tokens[i] = string.sub(str, pos, npos and npos - 1)
+		pos = epos and epos + 1
+		i = i + 1
+	until not pos
+	return tokens
+end
+
+-- https://github.com/juliettef/imgui_markdown/blob/master/imgui_markdown.h#L230
+local function imgui_text_wrapped(clr, text)
+	if clr then imgui.PushStyleColor(ffi.C.ImGuiCol_Text, clr) end
+
+	text = ffi.new('char[?]', #text + 1, text)
+	local text_end = text + ffi.sizeof(text) - 1
+	local pFont = imgui.GetFont()
+
+	local scale = 1.0
+	local endPrevLine = pFont:CalcWordWrapPositionA(scale, text, text_end, imgui.GetContentRegionAvail().x)
+	imgui.TextUnformatted(text, endPrevLine)
+
+	while endPrevLine < text_end do
+		text = endPrevLine
+		if text[0] == 32 then text = text + 1 end
+		endPrevLine = pFont:CalcWordWrapPositionA(scale, text, text_end, imgui.GetContentRegionAvail().x)
+		if text == endPrevLine then
+			endPrevLine = endPrevLine + 1
+		end
+		imgui.TextUnformatted(text, endPrevLine)
+	end
+
+	if clr then imgui.PopStyleColor() end
+end
+
+-- https://fishlake-scripts.ru/threads/8/post-24
+local function imgui_text_color(text, wrapped)
+	local style = imgui.GetStyle()
+	local colors = style.Colors
+
+	text = text:gsub('{(%x%x%x%x%x%x)}', '{%1FF}')
+	local render_func = wrapped and imgui_text_wrapped or function(clr, text)
+		if clr then imgui.PushStyleColor(ffi.C.ImGuiCol_Text, clr) end
+		imgui.TextUnformatted(text)
+		if clr then imgui.PopStyleColor() end
+	end
+
+	local color = colors[ffi.C.ImGuiCol_Text]
+	for _, w in ipairs(split(text, '\n')) do
+		local start = 1
+		local a, b = w:find('{........}', start)
+		while a do
+			local t = w:sub(start, a - 1)
+			if #t > 0 then
+				render_func(color, t)
+				imgui.SameLine(nil, 0)
+			end
+
+			local clr = w:sub(a + 1, b - 1)
+			if clr:upper() == 'STANDART' then color = colors[ffi.C.ImGuiCol_Text]
+			else
+				clr = tonumber(clr, 16)
+				if clr then
+					local r = bit.band(bit.rshift(clr, 24), 0xFF)
+					local g = bit.band(bit.rshift(clr, 16), 0xFF)
+					local b = bit.band(bit.rshift(clr, 8), 0xFF)
+					local a = bit.band(clr, 0xFF)
+					color = imgui.ImVec4(r / 255, g / 255, b / 255, a / 255)
 				end
-				local path = 'moonloader/filesSpur/img/'..name
-				if doesFileExist(path) then
-					for i, k in ipairs(images) do
-						if k[2] == path then
-							local width, height = GetImageWidthHeight(k[2])
-							if w:match('%[img%].+%[size%](%d+)%-(%d+)') then
-								local w, h = w:match('%[img%].+%[size%](%d+)%-(%d+)')
-								width, height = tonumber(w), tonumber(h)
-							end
-							imgui.Image(k[1], imgui.ImVec2(width, height))
-							w = ''
-							imgui.SameLine()
-						end
+			end
+
+			start = b + 1
+			a, b = w:find('{........}', start)
+		end
+		imgui.NewLine()
+		if #w >= start then
+			imgui.SameLine(nil, 0)
+			render_func(color, w:sub(start))
+		end
+	end
+end
+
+-- http://mydc.ru/ptopic334.html
+function string.lower(s)
+	s = lower(s)
+	local len, res = #s, {}
+	for i = 1, len do
+		local ch = sub(s, i, i)
+		res[i] = ul_rus[ch] or ch
+	end
+	return concat(res)
+end
+
+function string.upper(s)
+	s = upper(s)
+	local len, res = #s, {}
+	for i = 1, len do
+		local ch = sub(s, i, i)
+		res[i] = lu_rus[ch] or ch
+	end
+	return concat(res)
+end
+
+local current_dir = getWorkingDirectory() .. '\\spurs'
+createDirectory(current_dir)
+
+local spurs = folder.new(current_dir)
+spurs:submit('*.txt')
+
+local menu = ffi.new('bool[1]', false)
+local cindex = -1
+local overview = ffi.new('int[1]', 0)
+local buffer = ffi.new('char[?]', 0x10000)
+local is_find, find_text = false, false
+local find_buffer = ffi.new('char[?]', 0x10000)
+local name_spur = ffi.new('char[?]', 0x40)
+
+local res, user = pcall(os.getenv, 'USERNAME')
+local test_buffer = 'Hello, {FF0000}' .. (res and user or 'user') .. '{STANDART}!\n{FFFFFF55}How are {FFFF0055}you{FFFFFF55}?'
+test_buffer = ffi.new('char[?]', #test_buffer + 1, test_buffer)
+
+local error_text = ''
+
+-- Search
+local _imguitextunformatted = imgui.TextUnformatted
+local cury, curx, alltext = 0, 0, ''
+function imgui.TextUnformatted(text)
+	local info = cp1251:decode(cp1251(ffi.string(find_buffer)):lower())
+	local posx, start = imgui.GetCursorPosX(), 1
+	if is_find and find_text and info ~= '' then
+		local cy = imgui.GetCursorPosY()
+		local ttext = cp1251:decode(cp1251(type(text) == 'cdata' and ffi.string(text) or text):lower())
+		if cury ~= cy then
+			cury = cy
+			alltext = ''
+			curx = imgui.GetCursorScreenPos().x
+		end
+		alltext = alltext .. ttext
+		local st, en = alltext:find(info, start, true)
+		local cur = imgui.GetCursorScreenPos()
+
+		while st do
+			local offset_start = imgui.CalcTextSize(alltext:sub(1, st - 1))
+			local offset_end = imgui.CalcTextSize(info)
+			local cx = curx + offset_start.x
+			imgui.GetWindowDrawList():AddRectFilled(imgui.ImVec2(cx, cur.y), imgui.ImVec2(cx + offset_end.x, cur.y + offset_end.y),
+				imgui.ColorConvertFloat4ToU32(imgui.ImVec4(1, 1, 0.4, 0.3)), 1)
+			start = en + 1
+			st, en = alltext:find(info, start, true)
+		end
+		curx = curx + imgui.CalcTextSize(alltext:sub(1, start - 1)).x
+		alltext = alltext:sub(start)
+	else cury = 0 end
+	_imguitextunformatted(text)
+end
+
+imgui.OnFrame(function () return menu[0] end,
+function()
+    local style = imgui.GetStyle()
+
+	imgui.SetNextWindowSize(imgui.ImVec2(650, 350), ffi.C.ImGuiCond_FirstUseEver)
+
+	imgui.Begin('Spur ImGui 2', menu)
+
+	local size_files = imgui.GetWindowWidth() / 4
+	imgui.Columns(2)
+	imgui.SetColumnWidth(imgui.GetColumnIndex(), size_files)
+	imgui.BeginChild('##files', imgui.ImVec2(size_files - style.ItemSpacing.x * 2, 0))
+	if imgui.Selectable('New spur') then
+		imgui.OpenPopup('New spur')
+		error_text = ''
+		ffi.fill(name_spur, ffi.sizeof(name_spur), 0)
+	end
+	if imgui.Selectable('Update files') then
+		spurs:submit('*.txt')
+	end
+	imgui.Separator()
+	local files = spurs:files()
+	for i = 0, #files do
+		local file = files[i]
+		if file and file:type() == 'file' then
+			if imgui.Selectable(cp1251:decode(file:get_name():match('(.*)%.txt$'))) then
+				if i == cindex then cindex = -1
+				else
+					local f = file:open('r')
+					if f then
+						local text = cp1251:decode(f:read'*a')
+						ffi.fill(buffer, ffi.sizeof(buffer), 0)
+						ffi.fill(find_buffer, ffi.sizeof(find_buffer), 0)
+						is_find = false
+						ffi.copy(buffer, text, math.min(#text, ffi.sizeof(buffer)))
+						f:close()
+						cindex = i
+						overview[0] = 0
 					end
 				end
 			end
-			local text, color = {}, {}
-			local render_text = 1
-			local m = 1
-			if w:sub(1, 8) == '[center]' then
-				render_text = 2
-				w = w:sub(9)
-			elseif w:sub(1, 7) == '[right]' then
-				render_text = 3
-				w = w:sub(8)
-			end
-			w = w:gsub('{(......)}', '{%1FF}')
-			while w:find('{........}') do
-				local n, k = w:find('{........}')
-				if tonumber(w:sub(n+1, k-1), 16) or (w:sub(n+1, k-3):upper() == 'SSSSSS' and tonumber(w:sub(k-2, k-1), 16) or w:sub(k-2, k-1):upper() == 'SS') then
-					text[#text], text[#text+1] = w:sub(m, n-1), w:sub(k+1, #w)
-					color[#color+1] = color_imvec4(w:sub(n+1, k-1))
-					w = w:sub(1, n-1)..w:sub(k+1, #w)
-					m = n
-				else w = w:sub(1, n-1)..w:sub(n, k-3)..'}'..w:sub(k+1, #w) end
-			end
-			local length = imgui.CalcTextSize(u8(w))
-			if render_text == 2 then
-				imgui.NewLine()
-				imgui.SameLine(max_float / 2 - ( length.x / 2 ))
-			elseif render_text == 3 then
-				imgui.NewLine()
-				imgui.SameLine(max_float - length.x - 5 )
-			end
-			if text[0] then
-				for i, k in pairs(text) do
-					imgui.TextColored(color[i] or colors[clr.Text], u8(k))
-					imgui.SameLine(nil, 0)
-				end
-				imgui.NewLine()
-			else imgui.Text(u8(w)) end
 		end
 	end
-
-	render_text(string)
+	
+	if imgui.BeginPopupModal('New spur', nil, ffi.C.ImGuiWindowFlags_AlwaysAutoResize) then
+		if #error_text > 0 then
+			imgui.TextColored(imgui.ImVec4(1.0, 0.0, 0.0, 1.0), error_text)
+			imgui.Separator()
+		end
+		imgui.Text('Enter name of new spur:')
+		imgui.InputText('##name', name_spur, ffi.sizeof(name_spur) - 1)
+		imgui.Separator()
+		if imgui.Button('Create', imgui.ImVec2(120, 0)) then
+			local path = current_dir .. '\\' .. cp1251(ffi.string(name_spur)) .. '.txt'
+			local f = io.open(path)
+			if f then
+				error_text = 'This spur already created.'
+				f:close()
+			else
+				f = io.open(path, 'w')
+				f:write('')
+				f:close()
+				spurs:submit('*.txt')
+				imgui.CloseCurrentPopup()
+			end
+		end
+		imgui.SameLine()
+		if imgui.Button('Cancel', imgui.ImVec2(120, 0)) then
+			imgui.CloseCurrentPopup()
+		end
+		imgui.EndPopup()
+	end
 
 	imgui.EndChild()
-end
+	imgui.NextColumn()
+	imgui.BeginChild('##info')
 
-function removeMagicChar(text)
-	for i = 1, #magicChar do text = text:gsub(magicChar[i], '') end
-	return text
-end
-
-function onWindowMessage(msg, wparam, lparam)
-	if msg == 0x100 or msg == 0x101 then
-		if wparam == 0x1B then imgui.Process = false end
-	end
-end
-
-function imgui.GetMaxWidthByText(text)
-	local max = imgui.GetWindowWidth()
-	for w in text:gmatch('[^\r\n]+') do
-		local size = imgui.CalcTextSize(w)
-		if size.x > max then max = size.x end
-	end
-	return max - 15
-end
-
-function GetImageWidthHeight(file)
-	local fileinfo=type(file)
-	if type(file)=='string' then
-		file=assert(io.open(file,'rb'))
-	else
-		fileinfo=file:seek('cur')
-	end
-	local function refresh()
-		if type(fileinfo)=='number' then
-			file:seek('set',fileinfo)
-		else
-			file:close()
+	local cfile = files[cindex]
+	if cindex ~= -1 and cfile then
+		imgui.PushFont(bold)
+		imgui.Text(cp1251:decode(cfile:get_name():match('(.*)%.txt$')))
+		imgui.PopFont()
+		imgui.SameLine()
+		-- crutch
+		imgui.BeginChild('##options', imgui.ImVec2(imgui.CalcTextSize('Options >').x + style.ItemSpacing.x, imgui.GetFontSize() + style.ItemSpacing.y))
+		local status = 0
+		if imgui.BeginMenu('Options') then
+			if imgui.MenuItemBool('Edit name') then
+				ffi.fill(name_spur, ffi.sizeof(name_spur), 0)
+				status = 1
+			elseif imgui.MenuItemBool('Delete spur') then
+				status = 2
+			elseif imgui.MenuItemBool('Search') then is_find = true
+			elseif imgui.MenuItemBool('Close') then cindex = -1 end
+			imgui.EndMenu()
 		end
-	end
-	local width,height=0,0
-	file:seek('set',1)
-	if file:read(3)=='PNG' then
-		file:seek('set',16)
-		local widthstr,heightstr=file:read(4),file:read(4)
-		if type(fileinfo)=='number' then
-			file:seek('set',fileinfo)
-		else
-			file:close()
+		imgui.EndChild()
+		imgui.Separator()
+		local f = cfile:open('r')
+		if f and imgui.BeginTabBar('##file' .. cfile:get_name()) then
+			f:close()
+			if imgui.BeginTabItem('Overview') then
+				if is_find then
+					imgui.InputText('Search', find_buffer, ffi.sizeof(find_buffer) - 1)
+					imgui.SameLine()
+					if imgui.Button('Close') then is_find = false end
+				end
+				local all = ffi.string(buffer)
+				find_text = true
+				imgui_text_color(all, true)
+				find_text = false
+				cury = 0
+				imgui.EndTabItem()
+			end
+			if imgui.BeginTabItem('Edit') then
+				if imgui.InputTextMultiline('##buffer' .. cfile:get_name(), buffer, ffi.sizeof(buffer) - 1, imgui.ImVec2(-0.1, -0.1)) then
+					f = cfile:open('w')
+					f:write(cp1251(ffi.string(buffer)))
+					f:close()
+				end
+				imgui.EndTabItem()
+			end
+			imgui.EndTabBar()
 		end
-		width=widthstr:sub(1,1):byte()*16777216+widthstr:sub(2,2):byte()*65536+widthstr:sub(3,3):byte()*256+widthstr:sub(4,4):byte()
-		height=heightstr:sub(1,1):byte()*16777216+heightstr:sub(2,2):byte()*65536+heightstr:sub(3,3):byte()*256+heightstr:sub(4,4):byte()
-		return width,height
-	end
-	file:seek('set')
-	if file:read(2)=='BM' then
-		file:seek('set',18)
-		local widthstr,heightstr=file:read(4),file:read(4)
-		refresh()
-		width=widthstr:sub(4,4):byte()*16777216+widthstr:sub(3,3):byte()*65536+widthstr:sub(2,2):byte()*256+widthstr:sub(1,1):byte()
-		height=heightstr:sub(4,4):byte()*16777216+heightstr:sub(3,3):byte()*65536+heightstr:sub(2,2):byte()*256+heightstr:sub(1,1):byte()
-		return width,height
-	end
-	file:seek('set')
-	if file:read(2)=='\255\216' then
-		local lastb,curb=0,0
-		local xylist={}
-		local sstr=file:read(1)
-		while sstr~=nil do
-			lastb=curb
-			curb=sstr:byte()
-			if (curb==194 or curb==192) and lastb==255 then
-				file:seek('cur',3)
-				local sizestr=file:read(4)
-				local h=sizestr:sub(1,1):byte()*256+sizestr:sub(2,2):byte()
-				local w=sizestr:sub(3,3):byte()*256+sizestr:sub(4,4):byte()
-				if w>width and h>height then
-					width=w
-					height=h
+
+		if status == 1 then imgui.OpenPopup('Name spur')
+		elseif status == 2 then imgui.OpenPopup('Delete spur') end
+		if imgui.BeginPopupModal('Name spur', nil, ffi.C.ImGuiWindowFlags_AlwaysAutoResize) then
+			if #error_text > 0 then
+				imgui.TextColored(imgui.ImVec4(1.0, 0.0, 0.0, 1.0), error_text)
+				imgui.Separator()
+			end
+			imgui.Text('Enter new name of spur:')
+			imgui.InputText('##name', name_spur, ffi.sizeof(name_spur) - 1)
+			imgui.Separator()
+			if imgui.Button('Edit', imgui.ImVec2(120, 0)) then
+				local path = current_dir .. '\\' .. cp1251(ffi.string(name_spur)) .. '.txt'
+				local f = io.open(path)
+				if f then
+					error_text = 'This spur already created.'
+					f:close()
+				else
+					os.rename(cfile:full_path_name(), current_dir .. '\\' .. cp1251(ffi.string(name_spur)) .. '.txt')
+					spurs:submit('*.txt')
+					cindex = -1
+					imgui.CloseCurrentPopup()
 				end
 			end
-			sstr=file:read(1)
+			imgui.SameLine()
+			if imgui.Button('Cancel', imgui.ImVec2(120, 0)) then
+				imgui.CloseCurrentPopup()
+			end
+			imgui.EndPopup()
+		elseif imgui.BeginPopupModal('Delete spur', nil, ffi.C.ImGuiWindowFlags_AlwaysAutoResize) then
+			imgui.Text('Are you sure you want to delete the spur "' .. cp1251:decode(cfile:get_name():match('(.*)%.txt$')) .. '"?')
+			imgui.Separator()
+			if imgui.Button('Yes', imgui.ImVec2(135, 0)) then
+				os.remove(cfile:full_path_name())
+				cindex = -1
+				imgui.CloseCurrentPopup()
+			end
+			imgui.SameLine()
+			if imgui.Button('No', imgui.ImVec2(135, 0)) then
+				imgui.CloseCurrentPopup()
+			end
+			imgui.EndPopup()
 		end
-		if width>0 and height>0 then
-			refresh()
-			return width,height
-		end
-	end
-	file:seek('set')
-	if file:read(4)=='GIF8' then
-		file:seek('set',6)
-		width,height=file:read(1):byte()+file:read(1):byte()*256,file:read(1):byte()+file:read(1):byte()*256
-		refresh()
-		return width,height
-	end
-	file:seek('set')
-	if file:read(4)=='8BPS' then
-		file:seek('set',14)
-		local heightstr,widthstr=file:read(4),file:read(4)
-		refresh()
-		width=widthstr:sub(1,1):byte()*16777216+widthstr:sub(2,2):byte()*65536+widthstr:sub(3,3):byte()*256+widthstr:sub(4,4):byte()
-		height=heightstr:sub(1,1):byte()*16777216+heightstr:sub(2,2):byte()*65536+heightstr:sub(3,3):byte()*256+heightstr:sub(4,4):byte()
-		return width,height
-	end
-	file:seek('end',-18)
-	if file:read(10)=='TRUEVISION' then
-		file:seek('set',12)
-		width=file:read(1):byte()+file:read(1):byte()*256
-		height=file:read(1):byte()+file:read(1):byte()*256
-		refresh()
-		return width,height
-	end
-	file:seek('set')
-	if file:read(2)=='II' then
-		temp=file:read('*a')
-		btomlong={temp:find('Btomlong')}
-		rghtlong={temp:find('Rghtlong')}
-		if #btomlong==2 and #rghtlong==2 then
-			heightstr=temp:sub(btomlong[2]+1,btomlong[2]+5)
-			widthstr=temp:sub(rghtlong[2]+1,rghtlong[2]+5)
-			refresh()
-			width=widthstr:sub(1,1):byte()*16777216+widthstr:sub(2,2):byte()*65536+widthstr:sub(3,3):byte()*256+widthstr:sub(4,4):byte()
-			height=heightstr:sub(1,1):byte()*16777216+heightstr:sub(2,2):byte()*65536+heightstr:sub(3,3):byte()*256+heightstr:sub(4,4):byte()
-			return width,height
+	else
+		cindex = -1
+		imgui.PushFont(welcome)
+		imgui.Text('Spur ImGui 2')
+		imgui.PopFont()
+		imgui.Separator()
+		imgui_text_color([[
+This is a script that allows you to enter or view information directly in the game.
+Current version: v11.0 (19.10.19).
+Author: imring.]], true)
+		imgui.NewLine()
+		if imgui.BeginTabBar('##info') then
+			if imgui.BeginTabItem('Overview') then
+				imgui_text_color(ffi.string(test_buffer), true)
+				imgui.EndTabItem()
+			end
+			if imgui.BeginTabItem('Edit (read only)') then
+				imgui.InputTextMultiline('##testbuffer', test_buffer, ffi.sizeof(test_buffer) - 1, imgui.ImVec2(-0.1, -0.1), ffi.C.ImGuiInputTextFlags_ReadOnly)
+				imgui.EndTabItem()
+			end
+			imgui.EndTabBar()
 		end
 	end
-	file:seek('set',4)
-	if file:read(7)=='ftypmp4' then
-		file:seek('set',0xFB)
-		local widthstr,heightstr=file:read(4),file:read(4)
-		refresh()
-		width=widthstr:sub(1,1):byte()*16777216+widthstr:sub(2,2):byte()*65536+widthstr:sub(3,3):byte()*256+widthstr:sub(4,4):byte()
-		height=heightstr:sub(1,1):byte()*16777216+heightstr:sub(2,2):byte()*65536+heightstr:sub(3,3):byte()*256+heightstr:sub(4,4):byte()
-		return width,height
-	end
-	file:seek('set',8)
-	if file:read(3)=='AVI' then
-		file:seek('set',0x40)
-		width=file:read(1):byte()+file:read(1):byte()*256+file:read(1):byte()*65536+file:read(1):byte()*16777216
-		height=file:read(1):byte()+file:read(1):byte()*256+file:read(1):byte()*65536+file:read(1):byte()*16777216
-		refresh()
-		return width,height
-	end
-	refresh()
-	return nil
-end
 
-function getFilesSpur()
-	local files, window_file, languages, images = {}, {}, {}, {}
-	local handleFile, nameFile = findFirstFile('moonloader/filesSpur/*.txt')
-	local handleFile_l, nameFile_l = findFirstFile('moonloader/filesSpur/language/*.ini')
-	local handleImg, nameImg = findFirstFile('moonloader/filesSpur/img/*.*')
-	while nameFile or nameFile_l or nameImg do
-		if handleFile_l then
-			if not nameFile_l then
-				findClose(handleFile_l)
-			else 
-				languages[#languages+1] = nameFile_l
-				nameFile_l = findNextFile(handleFile_l)
-			end
-		end
-		if handleFile then
-			if not nameFile then 
-				findClose(handleFile)
-			else
-				window_file[#window_file+1] = imgui.ImBool(false)
-				files[#files+1] = nameFile
-				nameFile = findNextFile(handleFile)
-			end
-		end
-		if handleImg then
-			if not nameImg then 
-				findClose(handleImg)
-			else
-				local path = 'moonloader/filesSpur/img/'..nameImg
-				images[#images+1] = { imgui.CreateTextureFromFile(path), path }
-				nameImg = findNextFile(handleImg)
+	imgui.EndChild()
+
+	imgui.End()
+end)
+
+function main()
+	if isSampLoaded() and isSampfuncsLoaded() then
+		sampRegisterChatCommand('spur', function()
+			menu[0] = not menu[0]
+		end)
+		wait(-1)
+	else
+		while true do wait(0)
+			if testCheat('SPUR') then
+				menu[0] = not menu[0]
 			end
 		end
 	end
-	return files, window_file, languages, images
 end

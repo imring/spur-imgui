@@ -1,2 +1,0 @@
-In this folder you throw photos to later use them:
-[img]screenshot.png[size]x-y

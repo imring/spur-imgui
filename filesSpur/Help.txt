@@ -1,8 +1,0 @@
-[center]{CCCCCC}Spur ImGui by {2A79E0}imring{CCCCCC}
- 
-This script is created on ImGui.
-In this script you can enter some information that you can copy into the chat.
- 
-[right]Version: 8.0
-[right]Last update: 13 April 2018.
-[right]Special for {DDDDDD}blast{FFFFFF}.{0693C7}hk
